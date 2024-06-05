@@ -6,6 +6,7 @@ import {
 } from "@@/public/static/charting_library";
 import React from "react";
 import BinanceDatafeed from "./binance";
+import LocalStorageSaveLoadAdapter from "./save-data-chart";
 
 const Chart: React.FC = (): JSX.Element => {
   React.useEffect(() => {
@@ -125,7 +126,7 @@ const Chart: React.FC = (): JSX.Element => {
       outline: #2962FF solid 2px;
     }`;
 
-    async function fetchNews() {
+    const fetchNews = async () => {
       const response = await fetch(
         "https://demo-feed-data.tradingview.com/tv_news"
       );
@@ -160,7 +161,7 @@ const Chart: React.FC = (): JSX.Element => {
           title,
         };
       });
-    }
+    };
 
     function initOnReady() {
       const cssBlob = new Blob([customCSS], {
@@ -209,9 +210,7 @@ const Chart: React.FC = (): JSX.Element => {
         client_id: "trading_platform_demo",
         user_id: "public_user",
         theme: theme as ThemeName,
-
-        //   save_load_adapter: new LocalStorageSaveLoadAdapter(),
-
+        save_load_adapter: new LocalStorageSaveLoadAdapter(),
         widgetbar: {
           details: true,
           news: true,
@@ -224,18 +223,10 @@ const Chart: React.FC = (): JSX.Element => {
               "ETHUSDT",
               "BNBUSDT",
               "SOLUSDT",
+              "XRPUSDT",
               "LINKUSDT",
               "DOTUSDT",
               "ADAUSDT",
-              // "###STOCKS",
-              // "AAPL",
-              // "META",
-              // "MSFT",
-              // "IBM",
-              // "###FOREX",
-              // "USDVND",
-              // "EURUSD",
-              // "GBPUSD",
             ],
           },
         },
@@ -248,7 +239,7 @@ const Chart: React.FC = (): JSX.Element => {
             console.error(e);
           }
           callback({
-            title: "Top News Stories",
+            title: "Tin tức mới nhất",
             newsItems,
           });
         },
