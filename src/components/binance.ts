@@ -1,14 +1,14 @@
 class BinanceDatafeed {
   private binanceHost: string;
   private debug: boolean;
-  private listeners: any;
+  // private listeners: any;
   private websocket: WebSocket | null;
   private symbols: any = {};
 
   constructor(options) {
     this.binanceHost = "https://api.binance.com";
     this.debug = options.debug || false;
-    this.listeners = {};
+    // this.listeners = {};
     this.websocket = null;
   }
 
