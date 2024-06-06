@@ -9,7 +9,6 @@ class BinanceDatafeed {
   private binanceHost: string;
   private debug: boolean;
   private ws: WebsocketService;
-  private _quotesSubscriptions: any = {};
   private symbols: any = {};
   private count: number = 1;
 
@@ -309,17 +308,11 @@ class BinanceDatafeed {
     }
   }
 
-  subscribeQuotes(symbols, fastSymbols, onRealtimeCallback, listenerGUID) {
-    this._quotesSubscriptions[listenerGUID] = {
-      symbols,
-      fastSymbols,
-      onRealtimeCallback,
-    };
-
+  subscribeQuotes(symbols, _fastSymbols, onRealtimeCallback, listenerGUID) {
     const params = symbols?.map((item) => `${item.toLowerCase()}@ticker`);
 
     const subscriber = this.ws.addSubscriber({
-      id: Date.now().toString(),
+      id: listenerGUID,
       params: params,
     });
 
@@ -334,7 +327,6 @@ class BinanceDatafeed {
     subscriber.subscribe((event: MessageEvent<any>) => {
       const message = JSON.parse(event.data);
       if (message?.data && message?.data?.e === "24hrTicker") {
-        console.log("quote run");
         const data = message?.data;
         onRealtimeCallback([
           {
@@ -362,19 +354,15 @@ class BinanceDatafeed {
     });
   }
 
-  unsubscribeQuotes(listenerGUID) {
-    delete this._quotesSubscriptions[listenerGUID];
-
-    if (Object.keys(this._quotesSubscriptions).length === 0) {
-      // this.ws.close();
-    }
+  unsubscribeQuotes(listenerGUID: string) {
+    this.ws.unsubscribe(listenerGUID);
   }
 
   subscribeBars(
     symbolInfo,
     resolution,
     onRealtimeCallback,
-    _subscriberUID,
+    subscriberUID,
     _onResetCacheNeededCallback
   ) {
     const interval = {
@@ -403,7 +391,7 @@ class BinanceDatafeed {
     let lastBar: any = null;
 
     const subscriber = this.ws.addSubscriber({
-      id: Date.now().toString(),
+      id: subscriberUID,
       params: params,
     });
 
@@ -422,7 +410,6 @@ class BinanceDatafeed {
         message?.data?.k?.i === interval &&
         message?.data?.k?.s === symbolInfo.name
       ) {
-        console.log("kline run");
         const kline = message?.data?.k;
         const bar = {
           time: kline.t,
@@ -444,8 +431,8 @@ class BinanceDatafeed {
     });
   }
 
-  unsubscribeBars(subscriberUID) {
-    this.debug && console.log("👉 unsubscribeBars:", subscriberUID);
+  unsubscribeBars(subscriberUID: string) {
+    this.ws.unsubscribe(subscriberUID);
   }
 
   getServerTime(callback) {

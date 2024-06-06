@@ -1,3 +1,6 @@
+import { Observable } from "./observable";
+import Storage from "./storage";
+
 enum ReadyStateEnum {
   "CONNECTING" = 0,
   "OPEN" = 1,
@@ -22,74 +25,66 @@ class WebsocketService {
   private ws?: WebSocket;
   private url: string | URL;
   private protocols?: string | string[] | undefined;
-  private requestMessageList: RequestMessage[] = [];
-  private messageEventList: MessageEvent<any>[] = [];
+  private requestMessages: RequestMessage[] = [];
   private subscribers: Record<string, Subscriber> = {};
+  private storage: Storage;
 
   constructor(options: Option) {
     this.url = options.url;
     this.protocols = options.protocols;
-  }
-
-  public sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    this.storage = new Storage();
   }
 
   public connect() {
-    this.sendAsync();
     if (!this.ws || this.ws.readyState === ReadyStateEnum.CLOSED) {
       this.ws = new WebSocket(this.url, this.protocols);
 
       this.ws.addEventListener("open", async (_ev: Event) => {
-        console.log("Websocket is connected");
-        for (const request of this.requestMessageList) {
-          this.ws?.send(request);
-          await this.sleep(4000);
-        }
+        // console.log("Websocket is connected");
+        Observable.from(this.requestMessages).subscribe(
+          (request: RequestMessage) => {
+            Observable.setTimeout(1000).subscribe(() => {
+              this.ws?.send(request as RequestMessage);
+            });
+          }
+        );
       });
 
-      this.ws.addEventListener("error", (ev: Event) => {
-        console.log("Websocket is error", ev);
+      this.ws.addEventListener("error", (_ev: Event) => {
+        // console.log("Websocket is error", ev);
       });
 
       this.ws.addEventListener("close", (_ev: CloseEvent) => {
-        console.log("Websocket is closed");
-        setTimeout(() => {
+        // console.log("Websocket is closed");
+        Observable.setTimeout(2000).subscribe(() => {
           this.connect();
-        }, 3000);
+        });
       });
 
       this.ws.addEventListener("message", (ev: MessageEvent<any>) => {
-        this.messageEventList.push(ev);
+        const message = JSON.parse(ev.data);
+        if (message?.data?.s) {
+          this.storage.updateSymbol({
+            symbol: message?.data?.s,
+            value: message?.data,
+          });
+        }
         for (const id in this.subscribers) {
           this.subscribers[id].callback(ev);
+        }
+      });
+
+      Observable.setInterval(1000).subscribe(() => {
+        const request = this.requestMessages.shift();
+        if (request) {
+          this.ws?.send(request);
         }
       });
     }
   }
 
   public send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
-    if (this.ws && this.ws.readyState === ReadyStateEnum.OPEN) {
-      this.requestMessageList.push(data);
-    }
-
-    setTimeout(() => {
-      this.send(data);
-    }, 300);
-  }
-
-  public async sendAsync() {
-    const request = this.requestMessageList.shift();
-
-    if (this.ws && this.ws.readyState === ReadyStateEnum.OPEN) {
-      if (request) {
-        this.ws?.send(request);
-      }
-    }
-
-    setInterval(() => {
-      this.sendAsync();
-    }, 300);
+    this.requestMessages.push(data);
   }
 
   public addSubscriber({ id, params }: { id: string; params: string[] }) {
@@ -110,21 +105,8 @@ class WebsocketService {
     };
   }
 
-  public subscribe(id: string) {
-    return (callback: (messageEvent: MessageEvent<any>) => void) => {
-      if (this.ws && this.ws.readyState === ReadyStateEnum.OPEN) {
-        this.messageEventList.forEach((messageEvent: MessageEvent<any>) => {
-          if (messageEvent) {
-            callback(messageEvent);
-          }
-        });
-        this.messageEventList = [];
-      }
-
-      setTimeout(() => {
-        this.subscribe(id)(callback);
-      }, 400);
-    };
+  public unsubscribe(id: string) {
+    delete this.subscribers[id];
   }
 }
 
