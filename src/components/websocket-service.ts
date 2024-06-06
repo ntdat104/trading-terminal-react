@@ -26,6 +26,7 @@ class WebsocketService {
   private url: string | URL;
   private protocols?: string | string[] | undefined;
   private requestMessages: RequestMessage[] = [];
+  private params: string[] = [];
   private subscribers: Record<string, Subscriber> = {};
   private storage: Storage;
 
@@ -84,7 +85,24 @@ class WebsocketService {
   }
 
   public send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
-    this.requestMessages.push(data);
+    try {
+      const request = JSON.parse(data as string);
+      const params: string[] = [];
+      if (request?.params) {
+        request?.params?.forEach((param: string) => {
+          if (!this.params.includes(param)) {
+            this.params.push(param);
+            params.push(param);
+          }
+        });
+      }
+      request["params"] = params;
+      if (request?.params?.length > 0) {
+        this.requestMessages.push(JSON.stringify(request));
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   public addSubscriber({ id, params }: { id: string; params: string[] }) {
