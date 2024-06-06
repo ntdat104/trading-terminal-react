@@ -76,7 +76,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
   }
 
   public removeChart(id: string | number) {
-    for (var i = 0; i < this._charts.length; ++i) {
+    for (let i = 0; i < this._charts.length; ++i) {
       if (this._charts[i].id === id) {
         this._charts.splice(i, 1);
         this._isDirty = true;
@@ -103,7 +103,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
   }
 
   public getChartContent(id: string | number): Promise<string> {
-    for (var i = 0; i < this._charts.length; ++i) {
+    for (let i = 0; i < this._charts.length; ++i) {
       if (this._charts[i].id === id) {
         return Promise.resolve(this._charts[i].content);
       }
@@ -114,7 +114,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
   public removeStudyTemplate(
     studyTemplateData: StudyTemplateMetaInfo
   ): Promise<void> {
-    for (var i = 0; i < this._studyTemplates.length; ++i) {
+    for (let i = 0; i < this._studyTemplates.length; ++i) {
       if (this._studyTemplates[i].name === studyTemplateData.name) {
         this._studyTemplates.splice(i, 1);
         this._isDirty = true;
@@ -127,7 +127,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
   public getStudyTemplateContent(
     studyTemplateData: StudyTemplateMetaInfo
   ): Promise<string> {
-    for (var i = 0; i < this._studyTemplates.length; ++i) {
+    for (let i = 0; i < this._studyTemplates.length; ++i) {
       if (this._studyTemplates[i].name === studyTemplateData.name) {
         return Promise.resolve(this._studyTemplates[i].content);
       }
@@ -136,7 +136,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
   }
 
   public saveStudyTemplate(studyTemplateData: StudyTemplateData) {
-    for (var i = 0; i < this._studyTemplates.length; ++i) {
+    for (let i = 0; i < this._studyTemplates.length; ++i) {
       if (this._studyTemplates[i].name === studyTemplateData.name) {
         this._studyTemplates.splice(i, 1);
         break;
@@ -155,7 +155,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
     toolName: string,
     templateName: string
   ): Promise<void> {
-    for (var i = 0; i < this._drawingTemplates.length; ++i) {
+    for (let i = 0; i < this._drawingTemplates.length; ++i) {
       if (
         this._drawingTemplates[i].name === templateName &&
         this._drawingTemplates[i].toolName === toolName
@@ -172,7 +172,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
     toolName: string,
     templateName: string
   ): Promise<string> {
-    for (var i = 0; i < this._drawingTemplates.length; ++i) {
+    for (let i = 0; i < this._drawingTemplates.length; ++i) {
       if (
         this._drawingTemplates[i].name === templateName &&
         this._drawingTemplates[i].toolName === toolName
@@ -188,7 +188,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
     templateName: string,
     content: string
   ): Promise<void> {
-    for (var i = 0; i < this._drawingTemplates.length; ++i) {
+    for (let i = 0; i < this._drawingTemplates.length; ++i) {
       if (
         this._drawingTemplates[i].name === templateName &&
         this._drawingTemplates[i].toolName === toolName
@@ -262,7 +262,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
       this._drawings[this._getDrawingKey(layoutId, chartId)] = {};
     }
 
-    for (let [key, state] of drawings) {
+    for (const [key, state] of drawings) {
       if (state === null) {
         delete this._drawings[this._getDrawingKey(layoutId, chartId)][key];
       } else {
@@ -286,7 +286,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
     if (!rawSources) return null;
     const sources = new Map();
 
-    for (let [key, state] of Object.entries(rawSources)) {
+    for (const [key, state] of Object.entries(rawSources)) {
       sources.set(key, state);
     }
 
@@ -305,7 +305,7 @@ class LocalStorageSaveLoadAdapter implements IExternalSaveLoadAdapter {
     }
   }
 
-  protected _getFromLocalStorage<T extends unknown>(key: string): T {
+  protected _getFromLocalStorage<T>(key: string): T {
     const dataFromStorage = window.localStorage.getItem(key);
     return JSON.parse(dataFromStorage || "null");
   }

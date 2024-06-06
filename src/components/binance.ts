@@ -1,20 +1,24 @@
+import WebsocketService from "./websocket-service";
+
+type Option = {
+  binanceHost?: string;
+  debug?: boolean;
+};
+
 class BinanceDatafeed {
   private binanceHost: string;
   private debug: boolean;
-  // private listeners: any;
-  private websocket: WebSocket | null;
+  private ws: WebsocketService;
+  private _quotesSubscriptions: any = {};
   private symbols: any = {};
+  private count: number = 1;
 
-  constructor(options) {
-    this.binanceHost = "https://api.binance.com";
-    this.debug = options.debug || false;
-    // this.listeners = {};
-    this.websocket = null;
-  }
-
-  initWebsocket() {
-    this.websocket = null;
-    this.websocket = new WebSocket("wss://stream.binance.com:9443/ws");
+  constructor(options: Option) {
+    this.binanceHost = options.binanceHost || "https://api.binance.com";
+    this.debug = options?.debug || false;
+    this.ws = new WebsocketService({
+      url: `wss://stream.binance.com/stream`,
+    });
   }
 
   async binanceServerTime() {
@@ -63,7 +67,7 @@ class BinanceDatafeed {
 
   async onReady(callback) {
     try {
-      this.initWebsocket();
+      this.ws.connect();
       const symbols = await this.binanceSymbols();
       this.symbols = symbols;
       callback({
@@ -138,14 +142,14 @@ class BinanceDatafeed {
     const comps = symbolName.split(":");
     symbolName = (comps.length > 1 ? comps[1] : symbolName).toUpperCase();
 
-    function pricescale(symbol: any) {
-      for (let filter of symbol.filters) {
+    const pricescale = (symbol: any) => {
+      for (const filter of symbol.filters) {
         if (filter.filterType === "PRICE_FILTER") {
           return Math.round(1 / parseFloat(filter.tickSize));
         }
       }
       return 1;
-    }
+    };
 
     const symbol = this.symbols[symbolName];
 
@@ -254,8 +258,8 @@ class BinanceDatafeed {
         });
     };
 
-    var from_time = periodParams.from * 1000;
-    var to_time = periodParams.to * 1000;
+    const from_time = periodParams.from * 1000;
+    const to_time = periodParams.to * 1000;
 
     getKlines(from_time, to_time);
   }
@@ -275,6 +279,7 @@ class BinanceDatafeed {
         if (!symbolData) {
           return { s: "error", n: symbol };
         }
+
         return {
           s: "ok",
           n: symbol,
@@ -290,84 +295,80 @@ class BinanceDatafeed {
             bid: parseFloat(symbolData.bidPrice),
             spread:
               parseFloat(symbolData.askPrice) - parseFloat(symbolData.bidPrice),
+            open_price: parseFloat(symbolData?.openPrice),
+            high_price: parseFloat(symbolData?.highPrice),
+            low_price: parseFloat(symbolData?.lowPrice),
+            prev_close_price: parseFloat(symbolData?.prevClosePrice),
+            volume: parseFloat(symbolData?.volume),
           },
         };
       });
-      onDataCallback(quotes);
+      setTimeout(() => onDataCallback(quotes), 0);
     } catch (error) {
-      onErrorCallback(error);
+      setTimeout(() => onErrorCallback(error), 0);
     }
   }
 
-  // subscribeQuotes(symbols, fastSymbols, onRealtimeCallback, listenerGUID) {
-  //   this.listeners[listenerGUID] = {
-  //     symbols,
-  //     fastSymbols,
-  //     onRealtimeCallback,
-  //   };
+  subscribeQuotes(symbols, fastSymbols, onRealtimeCallback, listenerGUID) {
+    this._quotesSubscriptions[listenerGUID] = {
+      symbols,
+      fastSymbols,
+      onRealtimeCallback,
+    };
 
-  //   if (!this.websocket || this.websocket.readyState !== 1) {
-  //     return;
-  //   }
+    const params = symbols?.map((item) => `${item.toLowerCase()}@ticker`);
 
-  //   console.log("symbols", symbols);
-  //   console.log("fastSymbols", fastSymbols);
+    const subscriber = this.ws.addSubscriber({
+      id: Date.now().toString(),
+      params: params,
+    });
 
-  //   setTimeout(() => {
-  //     this.websocket?.send(
-  //       JSON.stringify({
-  //         method: "SUBSCRIBE",
-  //         params: symbols?.map((item) => `${item.toLowerCase()}@ticker`),
-  //         id: 2,
-  //       })
-  //     );
-  //   }, 3000);
+    subscriber.send(
+      JSON.stringify({
+        method: "SUBSCRIBE",
+        params: params,
+        id: this.count++,
+      })
+    );
 
-  //   this.websocket.onmessage = (event) => {
-  //     console.log("event - subscribeQuotes", event);
+    subscriber.subscribe((event: MessageEvent<any>) => {
+      const message = JSON.parse(event.data);
+      if (message?.data && message?.data?.e === "24hrTicker") {
+        console.log("quote run");
+        const data = message?.data;
+        onRealtimeCallback([
+          {
+            n: data?.s,
+            s: "ok",
+            v: {
+              ch: parseFloat(data.p),
+              chp: parseFloat(data.P),
+              short_name: data?.s,
+              exchange: "Binance",
+              original_name: data?.s,
+              description: data?.s,
+              lp: parseFloat(data.c),
+              ask: parseFloat(data.a),
+              bid: parseFloat(data.b),
+              spread: parseFloat(data.a) - parseFloat(data.b),
+              open_price: parseFloat(data?.o),
+              high_price: parseFloat(data?.h),
+              low_price: parseFloat(data?.l),
+              volume: parseFloat(data?.v),
+            },
+          },
+        ]);
+      }
+    });
+  }
 
-  //     const message = JSON.parse(event.data);
-  //     const data = message.data;
+  unsubscribeQuotes(listenerGUID) {
+    delete this._quotesSubscriptions[listenerGUID];
 
-  //     const symbol = data.s.replace("USDT", "").toLowerCase();
-  //     const callback = this.listeners[listenerGUID].onRealtimeCallback;
-
-  //     callback({
-  //       s: "ok",
-  //       n: symbol,
-  //       v: {
-  //         ch: parseFloat(data.p),
-  //         chp: parseFloat(data.P),
-  //         short_name: symbol,
-  //         exchange: "Binance",
-  //         original_name: symbol,
-  //         description: symbol,
-  //         lp: parseFloat(data.c),
-  //         ask: parseFloat(data.a),
-  //         bid: parseFloat(data.b),
-  //         spread: parseFloat(data.a) - parseFloat(data.b),
-  //       },
-  //     });
-  //   };
-
-  //   this.websocket.onerror = (error) => {
-  //     console.error("WebSocket error:", error);
-  //   };
-
-  //   this.websocket.onclose = () => {
-  //     console.log("WebSocket connection closed");
-  //     // this.initWebsocket();
-  //   };
-  // }
-
-  // unsubscribeQuotes(listenerGUID) {
-  //   delete this.listeners[listenerGUID];
-
-  //   if (Object.keys(this.listeners).length === 0 && this.websocket) {
-  //     // this.websocket.close();
-  //     // this.initWebsocket();
-  //   }
-  // }
+    if (Object.keys(this._quotesSubscriptions).length === 0) {
+      // this.ws.close();
+    }
+  }
 
   subscribeBars(
     symbolInfo,
@@ -397,31 +398,32 @@ class BinanceDatafeed {
       "1M": "1M",
     }[resolution];
 
-    if (!this.websocket || this.websocket.readyState !== 1) {
-      return;
-    }
-
-    this.websocket?.send(
-      JSON.stringify({
-        method: "SUBSCRIBE",
-        params: [`${symbolInfo.name.toLowerCase()}@kline_${interval}`],
-        id: 1,
-      })
-    );
+    const params = [`${symbolInfo.name.toLowerCase()}@kline_${interval}`];
 
     let lastBar: any = null;
 
-    this.websocket.onmessage = (event) => {
-      console.log("event - subscribeBars", event);
+    const subscriber = this.ws.addSubscriber({
+      id: Date.now().toString(),
+      params: params,
+    });
 
+    subscriber.send(
+      JSON.stringify({
+        method: "SUBSCRIBE",
+        params: params,
+        id: this.count++,
+      })
+    );
+
+    subscriber.subscribe((event: MessageEvent<any>) => {
       const message = JSON.parse(event.data);
-
       if (
-        message.e === "kline" &&
-        message.k.i === interval &&
-        message.k.s === symbolInfo.name
+        message?.data?.e === "kline" &&
+        message?.data?.k?.i === interval &&
+        message?.data?.k?.s === symbolInfo.name
       ) {
-        const kline = message.k;
+        console.log("kline run");
+        const kline = message?.data?.k;
         const bar = {
           time: kline.t,
           open: parseFloat(kline.o),
@@ -439,16 +441,7 @@ class BinanceDatafeed {
           onRealtimeCallback(bar);
         }
       }
-    };
-
-    this.websocket.onerror = (event) => {
-      console.error(event);
-    };
-
-    this.websocket.onclose = () => {
-      console.log("WebSocket closed");
-      this.initWebsocket();
-    };
+    });
   }
 
   unsubscribeBars(subscriberUID) {
