@@ -1,4 +1,4 @@
-import { Observable } from "./observable";
+import { from, interval, timeout } from "./observable/observable";
 import Storage from "./storage";
 
 enum ReadyStateEnum {
@@ -42,13 +42,11 @@ class WebsocketService {
 
       this.ws.addEventListener("open", async (_ev: Event) => {
         // console.log("Websocket is connected");
-        Observable.from(this.requestMessages).subscribe(
-          (request: RequestMessage) => {
-            Observable.setTimeout(1000).subscribe(() => {
-              this.ws?.send(request as RequestMessage);
-            });
-          }
-        );
+        from(this.requestMessages).subscribe((request: RequestMessage) => {
+          timeout(1000).subscribe(() => {
+            this.ws?.send(request as RequestMessage);
+          });
+        });
       });
 
       this.ws.addEventListener("error", (_ev: Event) => {
@@ -57,7 +55,7 @@ class WebsocketService {
 
       this.ws.addEventListener("close", (_ev: CloseEvent) => {
         // console.log("Websocket is closed");
-        Observable.setTimeout(2000).subscribe(() => {
+        timeout(2000).subscribe(() => {
           this.connect();
         });
       });
@@ -75,7 +73,11 @@ class WebsocketService {
         }
       });
 
-      Observable.setInterval(1000).subscribe(() => {
+      const test = from([1, 2, 3]).pipe(timeout(1000)).subscribe((res) => {
+        console.log("res", res);
+      });
+
+      interval(1000).subscribe(() => {
         const request = this.requestMessages.shift();
         if (request) {
           this.ws?.send(request);

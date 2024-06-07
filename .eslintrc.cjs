@@ -22,5 +22,6 @@ module.exports = {
     "no-constant-condition": "off",
     "no-empty": "off",
     "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/ban-types": "off",
   },
 };
