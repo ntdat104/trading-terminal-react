@@ -23,39 +23,6 @@ export class Observable {
   constructor(_subscribe: Subscribe) {
     this.subscribe = _subscribe;
   }
-
-  public pipe(_observable: Observable) {
-    const _subscribe = (
-      observerOrNext: Observer | Function,
-      error?: Function,
-      complete?: Function
-    ) => {
-      let observer: Observer;
-      let subscription: Subscription;
-
-      if (typeof observerOrNext === "function") {
-        observer = {
-          next: observerOrNext,
-          error: error || (() => {}),
-          complete: complete || (() => {}),
-        };
-      } else {
-        observer = observerOrNext;
-      }
-
-      observer.next(
-        (() => {
-          return 123;
-        })()
-      );
-
-      return new Subscription(() => {
-        subscription.unsubscribe();
-      });
-    };
-
-    return new Observable(_subscribe);
-  }
 }
 
 /** =================== timeout ================== **/
@@ -122,7 +89,7 @@ export const interval = (miliseconds: number) => {
 };
 
 /** =================== from ================== **/
-export const from = <T>(array: T[]) => {
+export const from = <T>(array: T[], miliseconds: number) => {
   const _subscribe = (
     observerOrNext: Observer | Function,
     error?: Function,
@@ -140,13 +107,26 @@ export const from = <T>(array: T[]) => {
       observer = observerOrNext;
     }
 
-    for (let i = 0; i < array.length; i++) {
-      observer.next(array[i]);
-    }
-    observer.complete();
+    const timeouts: any[] = [];
+
+    const delay = (miliseconds: number) => {
+      return new Promise((resolve) => {
+        const timeout = setTimeout(resolve, miliseconds);
+        timeouts.push(timeout);
+        return timeout;
+      });
+    };
+
+    (async () => {
+      for (let i = 0; i < array.length; i++) {
+        observer.next(array[i]);
+        await delay(miliseconds);
+      }
+      observer.complete();
+    })();
 
     return new Subscription(() => {
-      // No cleanup needed for this simple implementation
+      timeouts.forEach((timeout) => clearTimeout(timeout));
     });
   };
 

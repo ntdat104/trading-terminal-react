@@ -1,4 +1,4 @@
-import { from, interval, timeout } from "./observable/observable";
+import { interval, timeout } from "./observable";
 import Storage from "./storage";
 
 enum ReadyStateEnum {
@@ -19,13 +19,13 @@ type Subscriber = {
   callback: (ev: MessageEvent<any>) => void;
 };
 
-type RequestMessage = string | ArrayBufferLike | Blob | ArrayBufferView;
+type QueueMessage = string | ArrayBufferLike | Blob | ArrayBufferView;
 
 class WebsocketService {
   private ws?: WebSocket;
   private url: string | URL;
   private protocols?: string | string[] | undefined;
-  private requestMessages: RequestMessage[] = [];
+  private queueMessage: QueueMessage[] = [];
   private params: string[] = [];
   private subscribers: Record<string, Subscriber> = {};
   private storage: Storage;
@@ -42,11 +42,15 @@ class WebsocketService {
 
       this.ws.addEventListener("open", async (_ev: Event) => {
         // console.log("Websocket is connected");
-        from(this.requestMessages).subscribe((request: RequestMessage) => {
-          timeout(1000).subscribe(() => {
-            this.ws?.send(request as RequestMessage);
-          });
-        });
+        if (this.params.length) {
+          this.ws?.send(
+            JSON.stringify({
+              method: "SUBSCRIBE",
+              params: this.params,
+              id: 1,
+            })
+          );
+        }
       });
 
       this.ws.addEventListener("error", (_ev: Event) => {
@@ -55,6 +59,7 @@ class WebsocketService {
 
       this.ws.addEventListener("close", (_ev: CloseEvent) => {
         // console.log("Websocket is closed");
+        interval$.unsubscribe();
         timeout(2000).subscribe(() => {
           this.connect();
         });
@@ -73,14 +78,8 @@ class WebsocketService {
         }
       });
 
-      from([1, 2, 3])
-        .pipe(timeout(1000))
-        .subscribe((res) => {
-          console.log("res", res);
-        });
-
-      interval(1000).subscribe(() => {
-        const request = this.requestMessages.shift();
+      const interval$ = interval(1000).subscribe(() => {
+        const request = this.queueMessage.shift();
         if (request) {
           this.ws?.send(request);
         }
@@ -88,7 +87,7 @@ class WebsocketService {
     }
   }
 
-  public send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+  public send(data: QueueMessage) {
     try {
       const request = JSON.parse(data as string);
       const params: string[] = [];
@@ -102,7 +101,7 @@ class WebsocketService {
       }
       request["params"] = params;
       if (request?.params?.length > 0) {
-        this.requestMessages.push(JSON.stringify(request));
+        this.queueMessage.push(JSON.stringify(request));
       }
     } catch (error) {
       console.log(error);
