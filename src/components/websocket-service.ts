@@ -73,9 +73,11 @@ class WebsocketService {
         }
       });
 
-      const test = from([1, 2, 3]).pipe(timeout(1000)).subscribe((res) => {
-        console.log("res", res);
-      });
+      from([1, 2, 3])
+        .pipe(timeout(1000))
+        .subscribe((res) => {
+          console.log("res", res);
+        });
 
       interval(1000).subscribe(() => {
         const request = this.requestMessages.shift();
