@@ -12,10 +12,6 @@ export const getFinalValue = (value: number) => {
 export const getDigitFromValue = (value: number) => {
   const absValue = Math.abs(value);
 
-  if (absValue < 1) {
-    return 4;
-  }
-
   if (absValue < 10) {
     return 3;
   }
