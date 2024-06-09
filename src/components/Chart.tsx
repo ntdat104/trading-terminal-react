@@ -183,6 +183,7 @@ const Chart: React.FC = (): JSX.Element => {
         library_path: "static/charting_library/",
         locale: (getParameterByName("lang") || "vi") as LanguageCode,
         custom_css_url: cssBlobUrl,
+        timezone: "Asia/Ho_Chi_Minh",
 
         disabled_features: [
           // 'use_localstorage_for_settings',
@@ -211,6 +212,14 @@ const Chart: React.FC = (): JSX.Element => {
         user_id: "public_user",
         theme: theme as ThemeName,
         save_load_adapter: new LocalStorageSaveLoadAdapter(),
+        // custom_formatters: {
+        //   priceFormatterFactory: () => {
+        //     return {
+        //       format: (price: number) =>
+        //         formatPriceVND(getFinalValue(price), false),
+        //     };
+        //   },
+        // },
         widgetbar: {
           details: true,
           news: true,

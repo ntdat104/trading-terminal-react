@@ -1,3 +1,4 @@
+import { formatPriceVND, getFinalValue } from "./format-price";
 import WebsocketService from "./websocket-service";
 
 type Option = {
@@ -171,7 +172,7 @@ class BinanceDatafeed {
           format: "price",
           minmov: 1,
           pricescale: pricescale(symbol),
-          timezone: "UTC",
+          timezone: "Asia/Ho_Chi_Minh",
           has_intraday: true,
           has_daily: true,
           has_weekly_and_monthly: true,
@@ -236,6 +237,11 @@ class BinanceDatafeed {
             noData: false,
           }
         );
+        const lastBar = totalKlines[totalKlines.length - 1];
+        document.title = `${formatPriceVND(
+          getFinalValue(Number(lastBar[4])),
+          false
+        )} | ${symbolInfo?.ticker} | Trading`;
       }
     };
 
@@ -411,6 +417,10 @@ class BinanceDatafeed {
         message?.data?.k?.s === symbolInfo.name
       ) {
         const kline = message?.data?.k;
+        document.title = `${formatPriceVND(
+          getFinalValue(Number(kline?.c)),
+          false
+        )} | ${kline?.s} | Trading`;
         const bar = {
           time: kline.t,
           open: parseFloat(kline.o),
