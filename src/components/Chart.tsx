@@ -134,6 +134,7 @@ const Chart: React.FC = (): JSX.Element => {
       const parser = new DOMParser();
       const dom = parser.parseFromString(xml, "application/xml");
       const items = dom.querySelectorAll("item");
+      console.log('items', items);
 
       return Array.from(items).map((item) => {
         const title = item.querySelector("title")?.textContent;
@@ -163,7 +164,7 @@ const Chart: React.FC = (): JSX.Element => {
       });
     };
 
-    function initOnReady() {
+    const initOnReady = () => {
       const cssBlob = new Blob([customCSS], {
         type: "text/css",
       });
