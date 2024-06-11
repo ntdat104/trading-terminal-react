@@ -7,6 +7,7 @@ import {
 import React from "react";
 import BinanceDatafeed from "./binance";
 import LocalStorageSaveLoadAdapter from "./save-data-chart";
+import { formatPrice } from "./format-price";
 
 const Chart: React.FC = (): JSX.Element => {
   React.useEffect(() => {
@@ -134,7 +135,6 @@ const Chart: React.FC = (): JSX.Element => {
       const parser = new DOMParser();
       const dom = parser.parseFromString(xml, "application/xml");
       const items = dom.querySelectorAll("item");
-      console.log('items', items);
 
       return Array.from(items).map((item) => {
         const title = item.querySelector("title")?.textContent;
@@ -213,14 +213,13 @@ const Chart: React.FC = (): JSX.Element => {
         user_id: "public_user",
         theme: theme as ThemeName,
         save_load_adapter: new LocalStorageSaveLoadAdapter(),
-        // custom_formatters: {
-        //   priceFormatterFactory: () => {
-        //     return {
-        //       format: (price: number) =>
-        //         formatPriceVND(getFinalValue(price), false),
-        //     };
-        //   },
-        // },
+        custom_formatters: {
+          priceFormatterFactory: () => {
+            return {
+              format: (price: number) => formatPrice(price),
+            };
+          },
+        },
         widgetbar: {
           details: true,
           news: true,
@@ -299,7 +298,7 @@ const Chart: React.FC = (): JSX.Element => {
         );
       });
       window.frames[0].focus();
-    }
+    };
 
     initOnReady();
   }, []);

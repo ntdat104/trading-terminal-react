@@ -1,3 +1,4 @@
+import { formatPrice } from "./format-price";
 import WebsocketService from "./websocket-service";
 
 type Option = {
@@ -236,10 +237,6 @@ class BinanceDatafeed {
             noData: false,
           }
         );
-        const lastBar = totalKlines[totalKlines.length - 1];
-        document.title = `${Number(lastBar[4])} | ${
-          symbolInfo?.ticker
-        } | Trading`;
       }
     };
 
@@ -415,7 +412,7 @@ class BinanceDatafeed {
         message?.data?.k?.s === symbolInfo.name
       ) {
         const kline = message?.data?.k;
-        document.title = `${Number(kline?.c)} | ${kline?.s} | Trading`;
+        document.title = `${formatPrice(kline?.c)} | ${kline?.s} | Trading`;
         const bar = {
           time: kline.t,
           open: parseFloat(kline.o),

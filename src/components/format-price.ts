@@ -27,3 +27,26 @@ export const formatPriceVND = (input: number | string, isTrunc = true) => {
     .replace(/,/g, "")
     .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
+
+export const formatPrice = (value: number | string) => {
+  value = value.toString();
+  const priceNumber = parseFloat(value);
+  const absValue = Math.abs(priceNumber);
+
+  let digit: number;
+
+  if (absValue < 1) {
+    digit = 4;
+  } else if (absValue < 10) {
+    digit = 3;
+  } else {
+    digit = 2;
+  }
+
+  const formattedPrice = priceNumber.toLocaleString("en-US", {
+    minimumFractionDigits: digit,
+    maximumFractionDigits: digit,
+  });
+
+  return formattedPrice;
+};
