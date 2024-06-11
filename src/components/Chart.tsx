@@ -1,4 +1,6 @@
 import {
+  EntityId,
+  IChartingLibraryWidget,
   LanguageCode,
   ResolutionString,
   ThemeName,
@@ -10,6 +12,8 @@ import LocalStorageSaveLoadAdapter from "./save-data-chart";
 import { formatPrice } from "./format-price";
 
 const Chart: React.FC = (): JSX.Element => {
+  const tvWidget = React.useRef<IChartingLibraryWidget>();
+
   React.useEffect(() => {
     const getParameterByName = (name: string) => {
       name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
@@ -173,7 +177,7 @@ const Chart: React.FC = (): JSX.Element => {
         window.matchMedia &&
         window.matchMedia("(prefers-color-scheme: dark)").matches;
       const theme = getParameterByName("theme") || (isDark ? "dark" : "light");
-      const tvwidget = new widget({
+      tvWidget.current = new widget({
         debug: false,
         fullscreen: true,
         symbol: "BTCUSDT",
@@ -254,8 +258,10 @@ const Chart: React.FC = (): JSX.Element => {
         },
       });
 
-      tvwidget.headerReady().then(() => {
-        const themeToggleEl = tvwidget.createButton({
+      tvWidget.current.headerReady().then(() => {
+        if (!tvWidget.current) return;
+
+        const themeToggleEl = tvWidget.current.createButton({
           useTradingViewStyle: false,
           align: "right",
         });
@@ -274,7 +280,7 @@ const Chart: React.FC = (): JSX.Element => {
         checkboxEl.checked = theme === "dark";
         checkboxEl.addEventListener("change", function () {
           const themeToSet = checkboxEl.checked ? "dark" : "light";
-          tvwidget.changeTheme(themeToSet, { disableUndo: true });
+          tvWidget.current?.changeTheme(themeToSet, { disableUndo: true });
         });
 
         const themeSwitchCheckbox = themeToggleEl.querySelector(
@@ -297,10 +303,53 @@ const Chart: React.FC = (): JSX.Element => {
           handleRovingTabindexSecondaryElement
         );
       });
+
       window.frames[0].focus();
     };
 
     initOnReady();
+  }, []);
+
+  React.useEffect(() => {
+    tvWidget.current?.onChartReady(() => {
+      tvWidget.current?.activeChart().getSeries().setChartStyleProperties(1, {
+        upColor: "#2EBD85",
+        downColor: "#F6465D",
+        borderUpColor: "#2EBD85",
+        borderDownColor: "#F6465D",
+      });
+
+      const allStudies = tvWidget.current?.activeChart()?.getAllStudies();
+      const volumeId = allStudies?.find((c) => c.name === "Volume")
+        ?.id as EntityId;
+      const volume = tvWidget.current?.activeChart().getStudyById(volumeId);
+      volume?.applyOverrides({
+        "volume.color.0": "#F6465D",
+        "volume.color.1": "#2EBD85",
+      });
+
+      const chart = tvWidget.current?.activeChart();
+      [
+        { length: 7, color: "#FF9800" },
+        { length: 25, color: "#3179F5" },
+        { length: 99, color: "#4CAF50" },
+      ].forEach((item) => {
+        chart?.createStudy(
+          "Moving Average Exponential",
+          true,
+          false,
+          {
+            length: item.length,
+          },
+          {
+            "Plot.color": item.color,
+          }
+        );
+      });
+
+      // chart?.createStudy("MACD", false, false);
+      // chart?.createStudy("Relative Strength Index", false, false);
+    });
   }, []);
 
   return <div id="tv_chart_container" />;
