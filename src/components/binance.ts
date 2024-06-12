@@ -1,3 +1,8 @@
+import {
+  OnReadyCallback,
+  ResolutionString,
+  ServerTimeCallback,
+} from "@@/public/static/charting_library/charting_library";
 import { formatPrice } from "./format-price";
 import WebsocketService from "./websocket-service";
 
@@ -53,8 +58,13 @@ class BinanceDatafeed {
     }
   }
 
-  async binanceKlines(symbol, interval, startTime, endTime, limit) {
-    const url = `${this.binanceHost}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}&startTime=${startTime}&endTime=${endTime}`;
+  async binanceKlines(
+    symbol: string,
+    interval: string,
+    endTime: number,
+    limit: number
+  ) {
+    const url = `${this.binanceHost}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}&endTime=${endTime}`;
     try {
       const response = await fetch(url);
       const json = await response.json();
@@ -65,7 +75,7 @@ class BinanceDatafeed {
     }
   }
 
-  async onReady(callback) {
+  async onReady(callback: OnReadyCallback) {
     try {
       this.ws.connect();
       const symbols = await this.binanceSymbols();
@@ -90,7 +100,7 @@ class BinanceDatafeed {
           "3D",
           "1W",
           "1M",
-        ],
+        ] as ResolutionString[],
       });
     } catch (error) {
       console.error(error);
@@ -102,7 +112,7 @@ class BinanceDatafeed {
     userInput: string,
     _exchange: string,
     _symbolType: string,
-    onResultReadyCallback
+    onResultReadyCallback: any
   ) {
     const exchange = "BINANCE";
     const symbolType = "crypto";
@@ -134,8 +144,8 @@ class BinanceDatafeed {
 
   async resolveSymbol(
     symbolName: string,
-    onSymbolResolvedCallback,
-    onResolveErrorCallback
+    onSymbolResolvedCallback: any,
+    onResolveErrorCallback: any
   ) {
     this.debug && console.log("resolveSymbol:", symbolName);
 
@@ -186,7 +196,13 @@ class BinanceDatafeed {
     }, 0);
   }
 
-  async getBars(symbolInfo, resolution, periodParams, onResult, onError) {
+  async getBars(
+    symbolInfo: any,
+    resolution: any,
+    periodParams: any,
+    onResult: any,
+    onError: any
+  ) {
     const interval = {
       1: "1m",
       3: "3m",
@@ -240,17 +256,11 @@ class BinanceDatafeed {
       }
     };
 
-    const getKlines = (from, to) => {
-      this.binanceKlines(symbolInfo.name, interval, from, to, 500)
+    const getKlines = (end_time: number) => {
+      this.binanceKlines(symbolInfo.name, interval, end_time, 1000)
         .then((klines) => {
           totalKlines = totalKlines.concat(klines);
-
-          if (klines.length === 500) {
-            from = klines[klines.length - 1][0] + 1;
-            getKlines(from, to);
-          } else {
-            finishKlines();
-          }
+          finishKlines();
         })
         .catch((err) => {
           console.error(err);
@@ -258,13 +268,17 @@ class BinanceDatafeed {
         });
     };
 
-    const from_time = periodParams.from * 1000;
+    // const from_time = periodParams.from * 1000;
     const to_time = periodParams.to * 1000;
 
-    getKlines(from_time, to_time);
+    getKlines(to_time);
   }
 
-  async getQuotes(symbols, onDataCallback, onErrorCallback) {
+  async getQuotes(
+    symbols: string[],
+    onDataCallback: any,
+    onErrorCallback: any
+  ) {
     if (symbols.length === 0) {
       return;
     }
@@ -309,7 +323,12 @@ class BinanceDatafeed {
     }
   }
 
-  subscribeQuotes(symbols, _fastSymbols, onRealtimeCallback, listenerGUID) {
+  subscribeQuotes(
+    symbols: string[],
+    _fastSymbols: any,
+    onRealtimeCallback: any,
+    listenerGUID: string
+  ) {
     const params = symbols?.map((item) => `${item.toLowerCase()}@ticker`);
 
     const subscriber = this.ws.addSubscriber({
@@ -360,11 +379,11 @@ class BinanceDatafeed {
   }
 
   subscribeBars(
-    symbolInfo,
-    resolution,
-    onRealtimeCallback,
-    subscriberUID,
-    _onResetCacheNeededCallback
+    symbolInfo: any,
+    resolution: any,
+    onRealtimeCallback: any,
+    subscriberUID: string,
+    _onResetCacheNeededCallback: any
   ) {
     const interval = {
       1: "1m",
@@ -437,7 +456,7 @@ class BinanceDatafeed {
     this.ws.unsubscribe(subscriberUID);
   }
 
-  getServerTime(callback) {
+  getServerTime(callback: ServerTimeCallback) {
     this.binanceServerTime()
       .then((time) => {
         callback(Math.floor(time / 1000));
