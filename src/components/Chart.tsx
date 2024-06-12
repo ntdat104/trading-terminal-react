@@ -1,5 +1,6 @@
 import {
   EntityId,
+  IBrokerConnectionAdapterHost,
   IChartingLibraryWidget,
   LanguageCode,
   ResolutionString,
@@ -104,6 +105,10 @@ const Chart: React.FC = (): JSX.Element => {
           newsItems,
         });
       },
+
+      broker_factory: (_host: IBrokerConnectionAdapterHost) => {
+        return null as any;
+      },
     });
 
     tvWidget.current.headerReady().then(() => {
@@ -189,6 +194,47 @@ const Chart: React.FC = (): JSX.Element => {
           }
         );
       });
+
+      // tvWidget.current
+      //   ?.activeChart()
+      //   .createOrderLine()
+      //   .setTooltip("Additional order information")
+      //   .setModifyTooltip("Modify order")
+      //   .setCancelTooltip("Cancel order")
+      //   .onMove(function () {
+      //     this.setText("onMove called");
+      //   })
+      //   .onModify("onModify called", function (text) {
+      //     this.setText(text);
+      //   })
+      //   .onCancel("onCancel called", function (text) {
+      //     this.setText(text);
+      //   })
+      //   .setText("STOP: 73.5 (5,64%)")
+      //   .setQuantity("2");
+
+      // tvWidget.current
+      //   ?.activeChart()
+      //   .createPositionLine()
+      //   .onModify(function () {
+      //     this.setText("onModify called");
+      //   })
+      //   .onReverse("onReverse called", function (text) {
+      //     this.setText(text);
+      //   })
+      //   .onClose("onClose called", function (text) {
+      //     this.setText(text);
+      //   })
+      //   .setText("PROFIT: 71.1 (3.31%)")
+      //   .setTooltip("Additional position information")
+      //   .setProtectTooltip("Protect position")
+      //   .setCloseTooltip("Close position")
+      //   .setReverseTooltip("Reverse position")
+      //   .setQuantity("8.235")
+      //   .setPrice(60000)
+      //   .setExtendLeft(false)
+      //   .setLineStyle(0)
+      //   .setLineLength(25);
     });
   }, []);
 
