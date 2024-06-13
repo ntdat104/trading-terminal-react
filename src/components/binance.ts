@@ -1,7 +1,19 @@
 import {
+  ErrorCallback,
+  HistoryCallback,
+  LibrarySymbolInfo,
   OnReadyCallback,
+  PeriodParams,
+  QuoteData,
+  QuoteErrorData,
+  QuoteOkData,
+  QuotesCallback,
+  QuotesErrorCallback,
   ResolutionString,
+  ResolveCallback,
+  SearchSymbolsCallback,
   ServerTimeCallback,
+  SubscribeBarsCallback,
 } from "@@/public/static/charting_library/charting_library";
 import { formatPrice } from "./format-price";
 import WebsocketService from "./websocket-service";
@@ -108,78 +120,80 @@ class BinanceDatafeed {
     }
   }
 
-  async searchSymbols(
-    userInput: string,
-    _exchange: string,
-    _symbolType: string,
-    onResultReadyCallback: any
-  ) {
-    if (!userInput) {
-      userInput = "BTC";
-    }
-    const data: any = [];
-    for (const symbol in this.symbols) {
-      if (symbol.indexOf(userInput.toUpperCase()) === 0 && data.length < 20) {
-        data.push(this.symbols[symbol]);
-      }
-    }
-    setTimeout(() => {
-      onResultReadyCallback(
-        data?.map((item: any) => ({
-          symbol: item?.symbol,
-          full_name: item?.symbol,
-          description: item?.symbol,
-          ticker: item?.symbol,
-          exchange: "BINANCE",
-          type: "crypto",
-          logo_urls: [
-            `/static/images/crypto/${item?.baseAsset}.png`,
-            `/static/images/crypto/${item?.quoteAsset}.png`,
-          ],
-          exchange_logo: "/static/images/provider/binance.svg",
-        }))
-      );
-    }, 0);
-  }
-
   // async searchSymbols(
   //   userInput: string,
   //   _exchange: string,
   //   _symbolType: string,
-  //   onResultReadyCallback: any
+  //   onResult: SearchSymbolsCallback
   // ) {
   //   const exchange = "BINANCE";
   //   const symbolType = "crypto";
-  //   const response = await fetch(
-  //     `https://symbol-search.tradingview.com/local_search/?text=${userInput}&exchange=${exchange}&type=${symbolType}&tradable=1`
-  //   );
-  //   const data = await response.json();
-
+  //   if (!userInput) {
+  //     userInput = "BTC";
+  //   }
+  //   const data: any = [];
+  //   for (const symbol in this.symbols) {
+  //     if (symbol.indexOf(userInput.toUpperCase()) === 0 && data.length < 20) {
+  //       data.push(this.symbols[symbol]);
+  //     }
+  //   }
   //   setTimeout(() => {
-  //     onResultReadyCallback(
+  //     onResult(
   //       data?.map((item: any) => ({
   //         symbol: item?.symbol,
-  //         full_name: item?.description,
-  //         description: item?.description,
+  //         full_name: item?.symbol,
+  //         description: item?.symbol,
   //         ticker: item?.symbol,
-  //         exchange: item?.source_id,
-  //         type: `${item?.type} ${item?.typespecs?.join(" ")}`,
+  //         exchange: exchange,
+  //         type: symbolType,
   //         logo_urls: [
-  //           `/static/images/crypto/${
-  //             item?.symbol?.split(`${item?.currency_code}`)[0]
-  //           }.png`,
-  //           `/static/images/crypto/${item?.currency_code}.png`,
+  //           `/static/images/crypto/${item?.baseAsset}.png`,
+  //           `/static/images/crypto/${item?.quoteAsset}.png`,
   //         ],
-  //         exchange_logo: `/static/images/provider/${item?.provider_id}.svg`,
+  //         exchange_logo: "/static/images/provider/binance.svg",
   //       }))
   //     );
   //   }, 0);
   // }
 
+  async searchSymbols(
+    userInput: string,
+    _exchange: string,
+    _symbolType: string,
+    onResult: SearchSymbolsCallback
+  ) {
+    const exchange = "BINANCE";
+    const symbolType = "crypto";
+    const response = await fetch(
+      `https://symbol-search.tradingview.com/local_search/?text=${userInput}&exchange=${exchange}&type=${symbolType}&tradable=1`
+    );
+    const data = await response.json();
+
+    setTimeout(() => {
+      onResult(
+        data?.map((item: any) => ({
+          symbol: item?.symbol,
+          full_name: item?.description,
+          description: item?.description,
+          ticker: item?.symbol,
+          exchange: item?.source_id,
+          type: `${item?.type} ${item?.typespecs?.join(" ")}`,
+          logo_urls: [
+            `/static/images/crypto/${
+              item?.symbol?.split(`${item?.currency_code}`)[0]
+            }.png`,
+            `/static/images/crypto/${item?.currency_code}.png`,
+          ],
+          exchange_logo: `/static/images/provider/${item?.provider_id}.svg`,
+        }))
+      );
+    }, 0);
+  }
+
   async resolveSymbol(
     symbolName: string,
-    onSymbolResolvedCallback: any,
-    onResolveErrorCallback: any
+    onResolve: ResolveCallback,
+    onError: ErrorCallback
   ) {
     this.debug && console.log("resolveSymbol:", symbolName);
 
@@ -199,10 +213,9 @@ class BinanceDatafeed {
 
     if (symbol) {
       setTimeout(() => {
-        onSymbolResolvedCallback({
+        onResolve({
           name: symbol.symbol,
           exchange_logo: `/static/images/provider/${`binance`}.svg`,
-          full_name: symbol.symbol,
           description: symbol.baseAsset + " / " + symbol.quoteAsset,
           ticker: symbol.symbol,
           logo_urls: [
@@ -226,16 +239,16 @@ class BinanceDatafeed {
     }
 
     setTimeout(() => {
-      onResolveErrorCallback("not found");
+      onError("not found");
     }, 0);
   }
 
   async getBars(
-    symbolInfo: any,
-    resolution: any,
-    periodParams: any,
-    onResult: any,
-    onError: any
+    symbolInfo: LibrarySymbolInfo,
+    resolution: ResolutionString,
+    periodParams: PeriodParams,
+    onResult: HistoryCallback,
+    onError: ErrorCallback
   ) {
     const interval = {
       1: "1m",
@@ -310,8 +323,8 @@ class BinanceDatafeed {
 
   async getQuotes(
     symbols: string[],
-    onDataCallback: any,
-    onErrorCallback: any
+    onDataCallback: QuotesCallback,
+    onErrorCallback: QuotesErrorCallback
   ) {
     if (symbols.length === 0) {
       return;
@@ -322,10 +335,10 @@ class BinanceDatafeed {
     try {
       const response = await fetch(url);
       const data = await response.json();
-      const quotes = symbols.map((symbol) => {
+      const quotes: QuoteData[] = symbols.map((symbol) => {
         const symbolData = data.find((d) => d.symbol === symbol.toUpperCase());
         if (!symbolData) {
-          return { s: "error", n: symbol };
+          return { s: "error", n: symbol } as QuoteErrorData;
         }
 
         return {
@@ -349,18 +362,18 @@ class BinanceDatafeed {
             prev_close_price: parseFloat(symbolData?.prevClosePrice),
             volume: parseFloat(symbolData?.volume),
           },
-        };
+        } as QuoteOkData;
       });
       setTimeout(() => onDataCallback(quotes), 0);
-    } catch (error) {
-      setTimeout(() => onErrorCallback(error), 0);
+    } catch (_error) {
+      setTimeout(() => onErrorCallback("getQuotes error"), 0);
     }
   }
 
   subscribeQuotes(
     symbols: string[],
-    _fastSymbols: any,
-    onRealtimeCallback: any,
+    _fastSymbols: string[],
+    onRealtimeCallback: QuotesCallback,
     listenerGUID: string
   ) {
     const params = symbols?.map((item) => `${item.toLowerCase()}@ticker`);
@@ -413,11 +426,11 @@ class BinanceDatafeed {
   }
 
   subscribeBars(
-    symbolInfo: any,
-    resolution: any,
-    onRealtimeCallback: any,
-    subscriberUID: string,
-    _onResetCacheNeededCallback: any
+    symbolInfo: LibrarySymbolInfo,
+    resolution: ResolutionString,
+    onTick: SubscribeBarsCallback,
+    listenerGuid: string,
+    _onResetCacheNeededCallback: () => void
   ) {
     const interval = {
       1: "1m",
@@ -445,7 +458,7 @@ class BinanceDatafeed {
     let lastBar: any = null;
 
     const subscriber = this.ws.addSubscriber({
-      id: subscriberUID,
+      id: listenerGuid,
       params: params,
     });
 
@@ -477,17 +490,17 @@ class BinanceDatafeed {
 
         if (!lastBar || bar.time > lastBar.time) {
           lastBar = bar;
-          onRealtimeCallback(bar);
+          onTick(bar);
         } else if (bar.time === lastBar.time) {
           lastBar = bar;
-          onRealtimeCallback(bar);
+          onTick(bar);
         }
       }
     });
   }
 
-  unsubscribeBars(subscriberUID: string) {
-    this.ws.unsubscribe(subscriberUID);
+  unsubscribeBars(listenerGuid: string) {
+    this.ws.unsubscribe(listenerGuid);
   }
 
   getServerTime(callback: ServerTimeCallback) {
