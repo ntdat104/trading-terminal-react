@@ -114,33 +114,67 @@ class BinanceDatafeed {
     _symbolType: string,
     onResultReadyCallback: any
   ) {
-    const exchange = "BINANCE";
-    const symbolType = "crypto";
-    const response = await fetch(
-      `https://symbol-search.tradingview.com/local_search/?text=${userInput}&exchange=${exchange}&type=${symbolType}&tradable=1`
-    );
-    const data = await response.json();
-
+    if (!userInput) {
+      userInput = "BTC";
+    }
+    const data: any = [];
+    for (const symbol in this.symbols) {
+      if (symbol.indexOf(userInput.toUpperCase()) === 0 && data.length < 20) {
+        data.push(this.symbols[symbol]);
+      }
+    }
     setTimeout(() => {
       onResultReadyCallback(
         data?.map((item: any) => ({
           symbol: item?.symbol,
-          full_name: item?.description,
-          description: item?.description,
+          full_name: item?.symbol,
+          description: item?.symbol,
           ticker: item?.symbol,
-          exchange: item?.source_id,
-          type: `${item?.type} ${item?.typespecs?.join(" ")}`,
+          exchange: "BINANCE",
+          type: "crypto",
           logo_urls: [
-            `/static/images/crypto/${
-              item?.symbol?.split(`${item?.currency_code}`)[0]
-            }.png`,
-            `/static/images/crypto/${item?.currency_code}.png`,
+            `/static/images/crypto/${item?.baseAsset}.png`,
+            `/static/images/crypto/${item?.quoteAsset}.png`,
           ],
-          exchange_logo: `/static/images/provider/${item?.provider_id}.svg`,
+          exchange_logo: "/static/images/provider/binance.svg",
         }))
       );
     }, 0);
   }
+
+  // async searchSymbols(
+  //   userInput: string,
+  //   _exchange: string,
+  //   _symbolType: string,
+  //   onResultReadyCallback: any
+  // ) {
+  //   const exchange = "BINANCE";
+  //   const symbolType = "crypto";
+  //   const response = await fetch(
+  //     `https://symbol-search.tradingview.com/local_search/?text=${userInput}&exchange=${exchange}&type=${symbolType}&tradable=1`
+  //   );
+  //   const data = await response.json();
+
+  //   setTimeout(() => {
+  //     onResultReadyCallback(
+  //       data?.map((item: any) => ({
+  //         symbol: item?.symbol,
+  //         full_name: item?.description,
+  //         description: item?.description,
+  //         ticker: item?.symbol,
+  //         exchange: item?.source_id,
+  //         type: `${item?.type} ${item?.typespecs?.join(" ")}`,
+  //         logo_urls: [
+  //           `/static/images/crypto/${
+  //             item?.symbol?.split(`${item?.currency_code}`)[0]
+  //           }.png`,
+  //           `/static/images/crypto/${item?.currency_code}.png`,
+  //         ],
+  //         exchange_logo: `/static/images/provider/${item?.provider_id}.svg`,
+  //       }))
+  //     );
+  //   }, 0);
+  // }
 
   async resolveSymbol(
     symbolName: string,
