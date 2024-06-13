@@ -56,6 +56,8 @@ const Chart: React.FC = (): JSX.Element => {
         "show_percent_option_for_right_margin",
         // "display_data_mode",
         "items_favoriting",
+        "header_in_fullscreen_mode",
+        "side_toolbar_in_fullscreen_mode",
       ],
       overrides: {
         // 'mainSeriesProperties.sessionId': 'extended',
