@@ -29,13 +29,20 @@ export const formatPriceVND = (input: number | string, isTrunc = true) => {
 };
 
 export const formatPrice = (value: number | string) => {
+  if (!Number(value)) {
+    return 0;
+  }
+
   value = value.toString();
   const priceNumber = parseFloat(value);
   const absValue = Math.abs(priceNumber);
 
   let digit: number;
 
-  if (absValue < 0.000001) {
+  if (absValue < 0.0000001) {
+    // 0.00000009876
+    digit = 0;
+  } else if (absValue < 0.000001) {
     // 0.0000009876
     digit = 10;
   } else if (absValue < 0.00001) {
