@@ -30,7 +30,7 @@ export const formatPriceVND = (input: number | string, isTrunc = true) => {
 
 export const formatPrice = (value: number | string) => {
   if (!Number(value)) {
-    return 0;
+    return `0`;
   }
 
   value = value.toString();
