@@ -1,5 +1,5 @@
 import {
-  // EntityId,
+  EntityId,
   IBrokerConnectionAdapterHost,
   IChartingLibraryWidget,
   LanguageCode,
@@ -69,7 +69,8 @@ const Chart: React.FC = (): JSX.Element => {
       theme: theme as ThemeName,
       save_load_adapter: new LocalStorageSaveLoadAdapter(),
       load_last_chart: true,
-      // auto_save_delay: 4,
+      study_count_limit: undefined,
+      auto_save_delay: 3,
 
       custom_formatters: {
         priceFormatterFactory: () => {
@@ -163,85 +164,44 @@ const Chart: React.FC = (): JSX.Element => {
     });
   }, []);
 
-  // React.useEffect(() => {
-  //   tvWidget.current?.onChartReady(() => {
-  //     tvWidget.current?.activeChart().getSeries().setChartStyleProperties(1, {
-  //       upColor: "#2EBD85",
-  //       downColor: "#F6465D",
-  //       borderUpColor: "#2EBD85",
-  //       borderDownColor: "#F6465D",
-  //     });
+  React.useEffect(() => {
+    tvWidget.current?.onChartReady(() => {
+      tvWidget.current?.activeChart().getSeries().setChartStyleProperties(1, {
+        upColor: "#2EBD85",
+        downColor: "#F6465D",
+        borderUpColor: "#2EBD85",
+        borderDownColor: "#F6465D",
+      });
 
-  //     const allStudies = tvWidget.current?.activeChart()?.getAllStudies();
-  //     const volumeId = allStudies?.find((c) => c.name === "Volume")
-  //       ?.id as EntityId;
-  //     const volume = tvWidget.current?.activeChart().getStudyById(volumeId);
-  //     volume?.applyOverrides({
-  //       "volume.color.0": "#F6465D",
-  //       "volume.color.1": "#2EBD85",
-  //     });
+      const allStudies = tvWidget.current?.activeChart()?.getAllStudies();
+      const volumeId = allStudies?.find((c) => c.name === "Volume")
+        ?.id as EntityId;
+      const volume = tvWidget.current?.activeChart().getStudyById(volumeId);
+      volume?.applyOverrides({
+        "volume.color.0": "#F6465D",
+        "volume.color.1": "#2EBD85",
+      });
 
-  //     const chart = tvWidget.current?.activeChart();
-  //     [
-  //       { length: 7, color: "#FF9800" },
-  //       { length: 25, color: "#3179F5" },
-  //       { length: 99, color: "#4CAF50" },
-  //     ].forEach((item) => {
-  //       chart?.createStudy(
-  //         "Moving Average Exponential",
-  //         true,
-  //         false,
-  //         {
-  //           length: item.length,
-  //         },
-  //         {
-  //           "Plot.color": item.color,
-  //         }
-  //       );
-  //     });
-
-  //     tvWidget.current
-  //       ?.activeChart()
-  //       .createOrderLine()
-  //       .setTooltip("Additional order information")
-  //       .setModifyTooltip("Modify order")
-  //       .setCancelTooltip("Cancel order")
-  //       .onMove(function () {
-  //         this.setText("onMove called");
-  //       })
-  //       .onModify("onModify called", function (text) {
-  //         this.setText(text);
-  //       })
-  //       .onCancel("onCancel called", function (text) {
-  //         this.setText(text);
-  //       })
-  //       .setText("STOP: 73.5 (5,64%)")
-  //       .setQuantity("2");
-
-  //     tvWidget.current
-  //       ?.activeChart()
-  //       .createPositionLine()
-  //       .onModify(function () {
-  //         this.setText("onModify called");
-  //       })
-  //       .onReverse("onReverse called", function (text) {
-  //         this.setText(text);
-  //       })
-  //       .onClose("onClose called", function (text) {
-  //         this.setText(text);
-  //       })
-  //       .setText("PROFIT: 71.1 (3.31%)")
-  //       .setTooltip("Additional position information")
-  //       .setProtectTooltip("Protect position")
-  //       .setCloseTooltip("Close position")
-  //       .setReverseTooltip("Reverse position")
-  //       .setQuantity("8.235")
-  //       .setPrice(60000)
-  //       .setExtendLeft(false)
-  //       .setLineStyle(0)
-  //       .setLineLength(25);
-  //   });
-  // }, []);
+      // const chart = tvWidget.current?.activeChart();
+      // [
+      //   { length: 7, color: "#FF9800" },
+      //   { length: 25, color: "#3179F5" },
+      //   { length: 99, color: "#4CAF50" },
+      // ].forEach((item) => {
+      //   chart?.createStudy(
+      //     "Moving Average Exponential",
+      //     true,
+      //     false,
+      //     {
+      //       length: item.length,
+      //     },
+      //     {
+      //       "Plot.color": item.color,
+      //     }
+      //   );
+      // });
+    });
+  }, []);
 
   return <div id="tv_chart_container" />;
 };
