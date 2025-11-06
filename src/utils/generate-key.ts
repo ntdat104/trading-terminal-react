@@ -1,14 +1,14 @@
-export const generateCacheKey = async (
+import { createHash } from "crypto";
+
+export const generateCacheKey = (
   url: string,
   method: "GET" | "POST" = "GET",
   timeout: number,
   disable: boolean,
   body?: any
 ) => {
-  const encoded = new TextEncoder().encode(JSON.stringify(body || ""));
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-  const hashArray = [...new Uint8Array(hashBuffer)];
-  const bodyHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-
+  const bodyHash = body
+    ? createHash("sha256").update(JSON.stringify(body)).digest("hex")
+    : "";
   return `${method}:${url}:${bodyHash}:${timeout}:${disable.toString()}`;
 };
