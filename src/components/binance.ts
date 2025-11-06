@@ -179,8 +179,7 @@ class BinanceDatafeed {
           exchange: item?.source_id,
           type: `${item?.type} ${item?.typespecs?.join(" ")}`,
           logo_urls: [
-            `/static/images/crypto/${
-              item?.symbol?.split(`${item?.currency_code}`)[0]
+            `/static/images/crypto/${item?.symbol?.split(`${item?.currency_code}`)[0]
             }.png`,
             `/static/images/crypto/${item?.currency_code}.png`,
           ],
@@ -453,7 +452,10 @@ class BinanceDatafeed {
       "1M": "1M",
     }[resolution];
 
-    const params = [`${symbolInfo.name.toLowerCase()}@kline_${interval}`];
+    const params = [
+      `${symbolInfo.name.toLowerCase()}@kline_${interval}`,
+      `${symbolInfo.name.toLowerCase()}@aggTrade`
+    ];
 
     let lastBar: any = null;
 
@@ -472,6 +474,19 @@ class BinanceDatafeed {
 
     subscriber.subscribe((event: MessageEvent<any>) => {
       const message = JSON.parse(event.data);
+      if (
+        message?.data?.e === "aggTrade" &&
+        message?.data?.s === symbolInfo.name
+      ) {
+        document.title = `${formatPrice(message?.data?.p)} | ${message?.data?.s} | Trading`;
+        if (lastBar !== null) {
+          const bar = {
+            ...lastBar,
+            close: parseFloat(message?.data?.p)
+          };
+          onTick(bar);
+        }
+      }
       if (
         message?.data?.e === "kline" &&
         message?.data?.k?.i === interval &&
