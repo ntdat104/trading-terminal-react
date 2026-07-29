@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api-dnse/:path*",
+      "destination": "https://api.dnse.com.vn/:path*"
+    }
+  ]
+}

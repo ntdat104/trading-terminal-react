@@ -8,6 +8,14 @@ export default defineConfig({
     port: 4200,
     open: true,
     host: true,
+    proxy: {
+      // Mỗi khi gọi API bắt đầu bằng '/api-dnse', Vite sẽ chuyển tiếp sang domain DNSE
+      '/api-dnse': {
+        target: 'https://api.dnse.com.vn',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-dnse/, ''),
+      },
+    },
   },
   preview: {
     port: 8080,

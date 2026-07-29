@@ -560,7 +560,7 @@ class DNSEDatafeed {
   };
 
   constructor(options: DNSEOption = {}) {
-    this.dnseHost = options.dnseHost || "https://api.dnse.com.vn";
+    this.dnseHost = options.dnseHost || "/api-dnse";
     this.debug = options?.debug || false;
   }
 
