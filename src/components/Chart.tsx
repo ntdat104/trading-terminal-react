@@ -8,7 +8,7 @@ import {
   widget,
 } from "@@/public/static/charting_library";
 import React from "react";
-import BinanceDatafeed from "./binance";
+import BinanceDatafeed, { DNSEDatafeed } from "./binance";
 import LocalStorageSaveLoadAdapter from "./save-data-chart";
 import { formatPrice } from "./format-price";
 import { customCSS } from "@/utils/custom-css";
@@ -26,14 +26,23 @@ const Chart: React.FC = (): JSX.Element => {
       window.matchMedia &&
       window.matchMedia("(prefers-color-scheme: dark)").matches;
     const theme = getParameterByName("theme") || (isDark ? "dark" : "light");
+
+    // Chọn thị trường qua query param, ví dụ ?market=vn (chứng khoán VN qua DNSE),
+    // mặc định là crypto (Binance). ?symbol= để mở sẵn một mã.
+    const market = (getParameterByName("market") || "crypto").toLowerCase();
+    const isVN = market === "vn";
+    const defaultSymbol = getParameterByName("symbol") || (isVN ? "MWG" : "BTCUSDT");
+
     tvWidget.current = new widget({
       debug: false,
       fullscreen: true,
-      symbol: "BTCUSDT",
+      symbol: defaultSymbol,
       interval: "1d" as ResolutionString,
       container: "tv_chart_container",
       //	BEWARE: no trailing slash is expected in feed URL
-      datafeed: new BinanceDatafeed({ debug: false }),
+      datafeed: isVN
+        ? new DNSEDatafeed({ debug: false })
+        : new BinanceDatafeed({ debug: false }),
       library_path: "static/charting_library/",
       locale: (getParameterByName("lang") || "vi") as LanguageCode,
       custom_css_url: cssBlobUrl,
@@ -43,6 +52,8 @@ const Chart: React.FC = (): JSX.Element => {
         // 'use_localstorage_for_settings',
         "open_account_manager",
         "dom_widget",
+        // Thị trường VN: ẩn hẳn thanh công cụ + khung thông tin bên phải.
+        ...(isVN ? (["right_toolbar"] as const) : []),
       ],
       enabled_features: [
         "study_templates",
@@ -80,22 +91,36 @@ const Chart: React.FC = (): JSX.Element => {
         },
       },
       widgetbar: {
-        details: true,
-        news: true,
-        watchlist: true,
-        datawindow: true,
+        // Thị trường VN: ẩn toàn bộ khung thông tin bên phải, chỉ xem chart.
+        details: !isVN,
+        news: !isVN,
+        watchlist: !isVN,
+        datawindow: !isVN,
         watchlist_settings: {
-          default_symbols: [
-            "###CRYPTO",
-            "BTCUSDT",
-            "ETHUSDT",
-            "BNBUSDT",
-            "SOLUSDT",
-            "XRPUSDT",
-            "LINKUSDT",
-            "DOTUSDT",
-            "ADAUSDT",
-          ],
+          default_symbols: isVN
+            ? [
+                "###VN30",
+                "MWG",
+                "HPG",
+                "MBB",
+                "FPT",
+                "VNM",
+                "VIC",
+                "VCB",
+                "SSI",
+                "TCB",
+              ]
+            : [
+                "###CRYPTO",
+                "BTCUSDT",
+                "ETHUSDT",
+                "BNBUSDT",
+                "SOLUSDT",
+                "XRPUSDT",
+                "LINKUSDT",
+                "DOTUSDT",
+                "ADAUSDT",
+              ],
         },
       },
 

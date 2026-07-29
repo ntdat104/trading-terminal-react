@@ -120,42 +120,6 @@ class BinanceDatafeed {
     }
   }
 
-  // async searchSymbols(
-  //   userInput: string,
-  //   _exchange: string,
-  //   _symbolType: string,
-  //   onResult: SearchSymbolsCallback
-  // ) {
-  //   const exchange = "BINANCE";
-  //   const symbolType = "crypto";
-  //   if (!userInput) {
-  //     userInput = "BTC";
-  //   }
-  //   const data: any = [];
-  //   for (const symbol in this.symbols) {
-  //     if (symbol.indexOf(userInput.toUpperCase()) === 0 && data.length < 20) {
-  //       data.push(this.symbols[symbol]);
-  //     }
-  //   }
-  //   setTimeout(() => {
-  //     onResult(
-  //       data?.map((item: any) => ({
-  //         symbol: item?.symbol,
-  //         full_name: item?.symbol,
-  //         description: item?.symbol,
-  //         ticker: item?.symbol,
-  //         exchange: exchange,
-  //         type: symbolType,
-  //         logo_urls: [
-  //           `/static/images/crypto/${item?.baseAsset}.png`,
-  //           `/static/images/crypto/${item?.quoteAsset}.png`,
-  //         ],
-  //         exchange_logo: "/static/images/provider/binance.svg",
-  //       }))
-  //     );
-  //   }, 0);
-  // }
-
   async searchSymbols(
     userInput: string,
     _exchange: string,
@@ -164,30 +128,66 @@ class BinanceDatafeed {
   ) {
     const exchange = "BINANCE";
     const symbolType = "crypto";
-    const response = await fetch(
-      `https://symbol-search.tradingview.com/local_search/?text=${userInput}&exchange=${exchange}&type=${symbolType}&tradable=1`
-    );
-    const data = await response.json();
-
+    if (!userInput) {
+      userInput = "BTC";
+    }
+    const data: any = [];
+    for (const symbol in this.symbols) {
+      if (symbol.indexOf(userInput.toUpperCase()) === 0 && data.length < 20) {
+        data.push(this.symbols[symbol]);
+      }
+    }
     setTimeout(() => {
       onResult(
         data?.map((item: any) => ({
           symbol: item?.symbol,
-          full_name: item?.description,
-          description: item?.description,
+          full_name: item?.symbol,
+          description: item?.symbol,
           ticker: item?.symbol,
-          exchange: item?.source_id,
-          type: `${item?.type} ${item?.typespecs?.join(" ")}`,
+          exchange: exchange,
+          type: symbolType,
           logo_urls: [
-            `/static/images/crypto/${item?.symbol?.split(`${item?.currency_code}`)[0]
-            }.png`,
-            `/static/images/crypto/${item?.currency_code}.png`,
+            `/static/images/crypto/${item?.baseAsset}.png`,
+            `/static/images/crypto/${item?.quoteAsset}.png`,
           ],
-          exchange_logo: `/static/images/provider/${item?.provider_id}.svg`,
+          exchange_logo: "/static/images/provider/binance.svg",
         }))
       );
     }, 0);
   }
+
+  // async searchSymbols(
+  //   userInput: string,
+  //   _exchange: string,
+  //   _symbolType: string,
+  //   onResult: SearchSymbolsCallback
+  // ) {
+  //   const exchange = "BINANCE";
+  //   const symbolType = "crypto";
+  //   const response = await fetch(
+  //     `https://symbol-search.tradingview.com/local_search/?text=${userInput}&exchange=${exchange}&type=${symbolType}&tradable=1`
+  //   );
+  //   const data = await response.json();
+
+  //   setTimeout(() => {
+  //     onResult(
+  //       data?.map((item: any) => ({
+  //         symbol: item?.symbol,
+  //         full_name: item?.description,
+  //         description: item?.description,
+  //         ticker: item?.symbol,
+  //         exchange: item?.source_id,
+  //         type: `${item?.type} ${item?.typespecs?.join(" ")}`,
+  //         logo_urls: [
+  //           `/static/images/crypto/${item?.symbol?.split(`${item?.currency_code}`)[0]
+  //           }.png`,
+  //           `/static/images/crypto/${item?.currency_code}.png`,
+  //         ],
+  //         exchange_logo: `/static/images/provider/${item?.provider_id}.svg`,
+  //       }))
+  //     );
+  //   }, 0);
+  // }
 
   async resolveSymbol(
     symbolName: string,
@@ -529,4 +529,330 @@ class BinanceDatafeed {
   }
 }
 
+type DNSEOption = {
+  dnseHost?: string;
+  debug?: boolean;
+};
+
+// Datafeed cho thị trường chứng khoán Việt Nam (nguồn DNSE),
+// đặt cùng group với chart giống BinanceDatafeed.
+class DNSEDatafeed {
+  private dnseHost: string;
+  private debug: boolean;
+  private symbols: any = {};
+  private subscriptions: Record<string, ReturnType<typeof setInterval>> = {};
+
+  // Tên hiển thị cho từng sàn (floor) và từng loại chứng khoán (type)
+  private exchangeNames: Record<string, string> = {
+    HOSE: "Sàn HOSE",
+    HNX: "Sàn HNX",
+    UPCOM: "Sàn UPCOM",
+    HNX_BOND: "Trái phiếu HNX",
+  };
+  private typeNames: Record<string, string> = {
+    STOCK: "Cổ phiếu",
+    ETF: "ETF",
+    COVERED_WARRANT: "Chứng quyền",
+    CORPORATE_BOND: "Trái phiếu",
+    FU: "Phái sinh",
+    INDEX: "Chỉ số",
+    IFC: "Quỹ đóng",
+  };
+
+  constructor(options: DNSEOption = {}) {
+    this.dnseHost = options.dnseHost || "https://api.dnse.com.vn";
+    this.debug = options?.debug || false;
+  }
+
+  // TradingView resolution -> DNSE resolution
+  // 1 = 1 phút (nhỏ nhất), 1H = 1 giờ, 1D = 1 ngày, 1W = 1 tuần, 1M = 1 tháng
+  private toDnseResolution(resolution: ResolutionString): string | undefined {
+    return {
+      "1": "1",
+      "60": "1H",
+      "1H": "1H",
+      D: "1D",
+      "1D": "1D",
+      W: "1W",
+      "1W": "1W",
+      M: "1M",
+      "1M": "1M",
+    }[resolution];
+  }
+
+  async dnseTickers(symbol?: string) {
+    const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";
+    const url = `${this.dnseHost}/market-api/tickers${query}`;
+    try {
+      const response = await fetch(url, {
+        headers: { accept: "application/json, text/plain, */*" },
+      });
+      const json = await response.json();
+      if (this.debug) {
+        console.log(json);
+      }
+      return json?.data || [];
+    } catch (error) {
+      console.error(error);
+      throw new Error("Unable to fetch DNSE tickers.");
+    }
+  }
+
+  async dnseOhlcv(
+    symbol: string,
+    resolution: string,
+    from: number,
+    to: number
+  ) {
+    const url = `${this.dnseHost}/chart-api/v2/ohlcs/stock?from=${from}&to=${to}&symbol=${symbol}&resolution=${resolution}`;
+    try {
+      const response = await fetch(url, {
+        headers: { accept: "application/json, text/plain, */*" },
+      });
+      const json = await response.json();
+      return json;
+    } catch (error) {
+      console.error(error);
+      throw new Error(`Unable to fetch DNSE ohlcv for symbol ${symbol}.`);
+    }
+  }
+
+  async onReady(callback: OnReadyCallback) {
+    try {
+      const tickers = await this.dnseTickers();
+      const symbols = {};
+      // Group lại theo sàn (exchange) và loại (symbol type) để hiện bộ lọc
+      // trong Symbol Search của TradingView.
+      const floors = new Set<string>();
+      const types = new Set<string>();
+      tickers.forEach((item: any) => {
+        symbols[item?.symbol] = { ...item };
+        if (item?.floor) floors.add(item.floor);
+        if (item?.type) types.add(item.type);
+      });
+      this.symbols = symbols;
+
+      const exchanges = [
+        { value: "", name: "Tất cả sàn", desc: "Tất cả sàn" },
+        ...Array.from(floors).map((floor) => ({
+          value: floor,
+          name: floor,
+          desc: this.exchangeNames[floor] || floor,
+        })),
+      ];
+
+      const symbols_types = [
+        { value: "", name: "Tất cả loại" },
+        ...Array.from(types).map((type) => ({
+          value: type,
+          name: this.typeNames[type] || type,
+        })),
+      ];
+
+      callback({
+        exchanges,
+        symbols_types,
+        supports_marks: false,
+        supports_timescale_marks: false,
+        supports_time: true,
+        supported_resolutions: [
+          "1",
+          "60",
+          "1D",
+          "1W",
+          "1M",
+        ] as ResolutionString[],
+      });
+    } catch (error) {
+      console.error(error);
+      throw new Error("Unable to initialize DNSE datafeed.");
+    }
+  }
+
+  async searchSymbols(
+    userInput: string,
+    exchange: string,
+    symbolType: string,
+    onResult: SearchSymbolsCallback
+  ) {
+    const keyword = (userInput || "").toUpperCase();
+    const data: any = [];
+    for (const symbol in this.symbols) {
+      const item = this.symbols[symbol];
+      // Bộ lọc theo sàn / loại được người dùng chọn trong Symbol Search
+      if (exchange && item?.floor !== exchange) continue;
+      if (symbolType && item?.type !== symbolType) continue;
+      const matched =
+        symbol.indexOf(keyword) === 0 ||
+        (item?.companyName || "").toUpperCase().indexOf(keyword) >= 0 ||
+        (item?.shortName || "").toUpperCase().indexOf(keyword) >= 0;
+      if (matched && data.length < 30) {
+        data.push(item);
+      }
+    }
+    setTimeout(() => {
+      onResult(
+        data.map((item: any) => ({
+          symbol: item?.symbol,
+          full_name: item?.symbol,
+          description: item?.companyName || item?.shortName || item?.symbol,
+          ticker: item?.symbol,
+          exchange: item?.floor || "HOSE",
+          type: item?.type || "",
+          logo_urls: item?.logo ? [item.logo] : undefined,
+        }))
+      );
+    }, 0);
+  }
+
+  async resolveSymbol(
+    symbolName: string,
+    onResolve: ResolveCallback,
+    onError: ErrorCallback
+  ) {
+    this.debug && console.log("resolveSymbol:", symbolName);
+
+    const comps = symbolName.split(":");
+    symbolName = (comps.length > 1 ? comps[1] : symbolName).toUpperCase();
+
+    const symbol = this.symbols[symbolName];
+
+    if (symbol) {
+      setTimeout(() => {
+        onResolve({
+          name: symbol.symbol,
+          description: symbol.companyName || symbol.shortName || symbol.symbol,
+          ticker: symbol.symbol,
+          logo_urls: symbol?.logo ? [symbol.logo] : undefined,
+          exchange: symbol.floor || "HOSE",
+          listed_exchange: symbol.floor || "HOSE",
+          type: symbol.type || "stock",
+          session: "0900-1500",
+          format: "price",
+          minmov: 1,
+          pricescale: 100,
+          timezone: "Asia/Ho_Chi_Minh",
+          has_intraday: true,
+          has_daily: true,
+          has_weekly_and_monthly: true,
+          currency_code: "VND",
+        });
+      }, 0);
+      return;
+    }
+
+    setTimeout(() => {
+      onError("not found");
+    }, 0);
+  }
+
+  async getBars(
+    symbolInfo: LibrarySymbolInfo,
+    resolution: ResolutionString,
+    periodParams: PeriodParams,
+    onResult: HistoryCallback,
+    onError: ErrorCallback
+  ) {
+    const dnseResolution = this.toDnseResolution(resolution);
+    if (!dnseResolution) {
+      onError("Invalid interval");
+      return;
+    }
+
+    try {
+      const data = await this.dnseOhlcv(
+        symbolInfo.name,
+        dnseResolution,
+        periodParams.from,
+        periodParams.to
+      );
+
+      const times: number[] = data?.t || [];
+      if (times.length === 0) {
+        onResult([], { noData: true });
+        return;
+      }
+
+      const bars = times.map((t: number, i: number) => ({
+        time: t * 1000, // DNSE trả về giây, TradingView cần mili-giây
+        open: data.o[i],
+        high: data.h[i],
+        low: data.l[i],
+        close: data.c[i],
+        volume: data.v[i],
+      }));
+
+      onResult(bars, { noData: false });
+    } catch (err) {
+      console.error(err);
+      onError("Some problem");
+    }
+  }
+
+  subscribeBars(
+    symbolInfo: LibrarySymbolInfo,
+    resolution: ResolutionString,
+    onTick: SubscribeBarsCallback,
+    listenerGuid: string,
+    _onResetCacheNeededCallback: () => void
+  ) {
+    const dnseResolution = this.toDnseResolution(resolution);
+    if (!dnseResolution) {
+      return;
+    }
+
+    // DNSE không cung cấp websocket công khai ở đây nên poll bar mới nhất.
+    let lastBarTime = 0;
+
+    const poll = async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const from = now - 60 * 60 * 24 * 5; // đủ để lấy vài bar gần nhất
+      try {
+        const data = await this.dnseOhlcv(
+          symbolInfo.name,
+          dnseResolution,
+          from,
+          now
+        );
+        const times: number[] = data?.t || [];
+        if (times.length === 0) return;
+
+        const i = times.length - 1;
+        const bar = {
+          time: times[i] * 1000,
+          open: data.o[i],
+          high: data.h[i],
+          low: data.l[i],
+          close: data.c[i],
+          volume: data.v[i],
+        };
+
+        if (bar.time >= lastBarTime) {
+          lastBarTime = bar.time;
+          document.title = `${formatPrice(bar.close)} | ${symbolInfo.name} | Trading`;
+          onTick(bar);
+        }
+      } catch (err) {
+        this.debug && console.error(err);
+      }
+    };
+
+    poll();
+    this.subscriptions[listenerGuid] = setInterval(poll, 5000);
+  }
+
+  unsubscribeBars(listenerGuid: string) {
+    const timer = this.subscriptions[listenerGuid];
+    if (timer) {
+      clearInterval(timer);
+      delete this.subscriptions[listenerGuid];
+    }
+  }
+
+  getServerTime(callback: ServerTimeCallback) {
+    callback(Math.floor(Date.now() / 1000));
+  }
+}
+
 export default BinanceDatafeed;
+export { DNSEDatafeed };
